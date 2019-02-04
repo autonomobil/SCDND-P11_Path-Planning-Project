@@ -1,5 +1,5 @@
-#include "Eigen-3.3/Eigen/Core"
-#include "Eigen-3.3/Eigen/QR"
+// #include "Eigen-3.3/Eigen/Core"
+// #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 #include <chrono>
 #include <fstream>
@@ -29,7 +29,7 @@ int main()
     // The max s value before wrapping around the track back to 0
     double MAX_S = 6945.554;
     // max speed
-    double MAX_VEL = mph_to_mps(49.85); // mph --> m/s
+    double MAX_VEL = mph_to_mps(49.5); // mph --> m/s
     // max speed
     double MAX_ACC = 9; // m/s²
     // last  speed
@@ -108,14 +108,15 @@ int main()
                     json msgJson;
 
                     size_t prev_size = previous_path_x.size();
-                    int use_no_old_points = min(5, (int)prev_size);
+                    int use_no_old_points = min(20, (int)prev_size);
 
                     //////////////////// PREDICTION ////////////////////
                     bool car_ahead = false;
                     bool car_left = false;
                     bool car_right = false;
-                    double delta_l = 100000000000000;
-                    double delta_r = 100000000000000;
+                    int wanted_lane = lane;
+                    double delta_s_left = 100000000000000;
+                    double delta_s_right = 100000000000000;
 
                     bool danger = false;
                     double delta_s = 10000000000000;
@@ -125,7 +126,7 @@ int main()
                         double check_car_d = sensor_fusion[i][6];
                         double check_car_s = sensor_fusion[i][5];
 
-                        if (abs(check_car_d - car_d) < 2.5 && check_car_s - car_s < 7 && check_car_s - car_s > 0) {
+                        if (abs(check_car_d - car_d) < 2.5 && check_car_s - car_s < 9 && check_car_s - car_s > 0) {
                             danger = true;
                             cout << "DANGER!" << endl;
                             break;
@@ -154,27 +155,24 @@ int main()
 
                         if (check_car_lane == lane) {
                             // car same lane infront
-                            // cout << "predict_check_car_s: " << predict_check_car_s << "   predict_car_s:" << predict_car_s << endl;
-                            // cout << "check_car_s: " << check_car_s << "   car_s:" << car_s << endl;
-
-                            car_ahead |= predict_check_car_s > predict_car_s && predict_check_car_s - predict_car_s < 40;
-                            // get id of currently clostest car in same lane
+                            car_ahead |= predict_check_car_s > predict_car_s && predict_check_car_s - predict_car_s < 30;
+                            // get clostest car ahead
                             if (abs(check_car_s - car_s) < delta_s) {
-                                ahead_speed = check_speed; // speed of car in front
+                                ahead_speed = check_speed; // speed of car infront
                                 delta_s = abs(check_car_s - car_s); // use this delta_s instead
                             }
 
                         } else if (check_car_lane - lane == -1) {
                             // car left
-                            car_left |= predict_car_s - 12 < predict_check_car_s && predict_car_s + 40 > predict_check_car_s;
-                            if (check_car_s - car_s < delta_l && (check_car_s - car_s) > 0) {
-                                delta_l = check_car_s - car_s;
+                            car_left |= predict_car_s - 12 < predict_check_car_s && predict_car_s + 30 > predict_check_car_s;
+                            if (check_car_s - car_s < delta_s_left && (check_car_s - car_s) > 0) {
+                                delta_s_left = check_car_s - car_s;
                             }
                         } else if (check_car_lane - lane == 1) {
                             // car right
-                            car_right |= predict_car_s - 12 < predict_check_car_s && predict_car_s + 40 > predict_check_car_s;
-                            if (check_car_s - car_s < delta_r && (check_car_s - car_s) > 0) {
-                                delta_r = check_car_s - car_s;
+                            car_right |= predict_car_s - 12 < predict_check_car_s && predict_car_s + 30 > predict_check_car_s;
+                            if (check_car_s - car_s < delta_s_right && (check_car_s - car_s) > 0) {
+                                delta_s_right = check_car_s - car_s;
                             }
                         }
                     }
@@ -182,43 +180,46 @@ int main()
                     //////////////////// BEHAVIOUR PLANNING ////////////////////
                     double speed_diff = 0;
                     // bool follow_car_ahead = false;
-                    bool lane_change_left = true; // check if left lane is best option
+                    bool lane_change_left_best_opt = true; // check if left lane is best option
+                    bool follow_car_ahead = false;
+                    bool lane_change = false;
 
-                    if (delta_r > delta_l) {
-                        lane_change_left = false;
+                    if (delta_s_right > delta_s_left) {
+                        lane_change_left_best_opt = false;
                     }
 
                     if (danger) {
                         speed_diff -= MAX_ACC * dt;
                     } else if (car_ahead) {
-                        // double check_car_s = sensor_fusion[id_car_ahead][5];
-                        if (!car_left && lane > 0 && lane_change_left) {
+                        if (!car_left && lane > 0 && lane_change_left_best_opt) {
                             // if there is no dangerous car left and there is a left lane
-                            lane--; // Change lane left.
-                            cout << "Lane change left! delta_l: " << delta_l << "   delta_r:" << delta_r << endl;
+                            wanted_lane--; // Change lane left.
+                            lane_change = true;
+                            cout << "Lane change left! delta_s_left: " << delta_s_left << "   delta_s_right:" << delta_s_right << endl;
                         } else if (!car_right && lane != 2) {
                             // if there is no dangerous car right and there is a right lane
-                            lane++; // Change lane right.
-                            cout << "Lane change right! delta_l: " << delta_l << "   delta_r:" << delta_r << endl;
+                            wanted_lane++; // Change lane right.
+                            lane_change = true;
+                            cout << "Lane change right! delta_s_left: " << delta_s_left << "   delta_s_right:" << delta_s_right << endl;
                         } else {
                             // slow down
                             cout << "car ahead! delta_s: " << delta_s << endl;
-                            if (delta_s < 15 && car_speed > ahead_speed * 0.95) {
-                                speed_diff -= MAX_ACC * dt * min(1.0, pow(15, 2) / pow((delta_s), 2));
-                                use_no_old_points = 3;
-                                // follow_car_ahead = true;
+                            if (car_speed > ahead_speed * 0.95) {
+                                speed_diff -= MAX_ACC * dt * min(1.0, pow(12, 2) / pow((delta_s), 2));
+                                follow_car_ahead = true;
                             }
                         }
 
                     } else {
                         if (lane != 1) { // go back to center lane if possible, because there are more options
                             if ((lane == 0 && !car_right) || (lane == 2 && !car_left)) {
-                                lane = 1;
+                                wanted_lane = 1;
+                                lane_change = true;
                                 cout << "Take me back to the center " << endl;
                             }
                         }
                         if (ref_vel < MAX_VEL) {
-                            speed_diff += MAX_ACC * dt * 0.85;
+                            speed_diff += MAX_ACC * dt * 0.7;
                         }
                     }
                     ref_vel += speed_diff;
@@ -231,15 +232,13 @@ int main()
                     vector<double> next_y_vals;
 
                     size_t vec_size = 100;
-                    // size_t use_no_old_points = prev_size;
 
                     // take previous unused path points for continuity and smoothness
                     if (danger) {
-                        use_no_old_points = 3;
+                        use_no_old_points = 2;
+                    }else if (follow_car_ahead) {
+                        use_no_old_points = 10;
                     }
-                    // if(follow_car_ahead){
-                    //     use_no_old_points = 5;
-                    // }
 
                     for (int i = 0; i < use_no_old_points; i++) {
                         next_x_vals.push_back(previous_path_x[i]);
@@ -285,13 +284,24 @@ int main()
 
                     // setting up target points
                     int n_wp = 3; // number of target points
-                    int s_incr = 35; // distance between target points
+                    int s_incr = 40; // distance between target points
+                    double d_value;
 
                     for (int i = 1; i <= n_wp; i++) {
-                        vector<double> next_wp = getXY(car_s + s_incr * i, 2 + 4 * lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+                        if (i == 1) {
+                            d_value = 2 + 4 * lane;
+                        } else if (i == 2) {
+                            d_value = 2 + 4 * (wanted_lane+lane)/2;
+                        } else if (i == 3) {
+                            d_value = 2 + 4 * wanted_lane;
+                        }
+
+                        vector<double> next_wp = getXY(car_s + s_incr * i,  d_value, map_waypoints_s, map_waypoints_x, map_waypoints_y);
                         ptsx.push_back(next_wp[0]);
                         ptsy.push_back(next_wp[1]);
                     }
+
+                    lane = wanted_lane;
 
                     // global coordinates to local car coordinates
                     for (int i = 0; i < ptsx.size(); i++) {
@@ -312,19 +322,11 @@ int main()
                         spl.set_points(ptsx, ptsy);
                     }
 
-                    // set target x in local car coordinates, calculate target y target and distance
-                    double target_x = 60;
-                    double target_y = spl(target_x);
-                    double target_dist = distance(0, 0, target_x, target_y);
-
                     double x_add_on = 0;
 
                     for (int i = 1; i < vec_size - use_no_old_points; i++) {
 
-                        double N = target_dist / (dt * ref_vel);
-                        double x_point = x_add_on + target_x / N;
-
-                        // double x_point = x_add_on + (dt * ref_vel);
+                        double x_point = x_add_on + dt * ref_vel;
 
                         double y_point = spl(x_point);
 
@@ -354,8 +356,7 @@ int main()
     });
 
     // We don't need this since we're not using HTTP but if it's removed the
-    // program
-    // doesn't compile :-(
+    // program doesn't compile :-(
     h.onHttpRequest([](uWS::HttpResponse* res, uWS::HttpRequest req, char* data,
                         size_t, size_t) {
         const std::string s = "<h1>Hello world!</h1>";
