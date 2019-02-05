@@ -44,7 +44,7 @@ This part of the code takes the sensor fusion and ego car data and calculates si
 * **delta_s** - double, minimum of all delta s of ego car and checked car on same lane
 * **ahead_speed** - double, speed of the checked vehicle which as the minimum delta s on same lane
 
-### Behavior Planning [line 178 to line 228](./src/main.cpp#L180)
+### Behavior Planning [line 178 to line 228](./src/main.cpp#L178)
 The signals determined previously are now used to plan the behavior of the vehicle and enable a generation of the trajectory in the next step. Here two important question have to be answered:
   - Change lane or keep lane?
   - Positive or negative acceleration?
@@ -56,7 +56,7 @@ The signals that result from this are the following:
 **follow_car_ahead** - boolean, if there is a car in the same lane and it is not safe to change lanes and  a matching of ego car velocity is needed
 **planned_lane** - integer, planned lane number. 0 = left, 1 = middle, 2 = right
 
-### Trajectory Generation [line 229 to line 341](./src/main.cpp#L230)
+### Trajectory Generation [line 229 to line 341](./src/main.cpp#L229)
 In this part a Jerk-Minimizing-Trajectory (JMT) could be used, but the Udacity seed project suggested using the spline.h library helps out a lot. Futhermore the Q&A from Udacity regarding this project was helpful to create smooth trajectories.
 
 The code calculates the trajectory based on the speed and lane output from behavioral planning, vehicle coordinates and past waypoints.
