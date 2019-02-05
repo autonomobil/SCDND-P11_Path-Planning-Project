@@ -14,6 +14,7 @@ In this project, the goal is to design a path planner that is able to create smo
 **20+ miles is no problem:**
 ![img4]
 **The results can be viewed here([Youtube](https://youtu.be/8EBtGReGX-E)):**
+
 [![result1](https://img.youtube.com/vi/8EBtGReGX-E/0.jpg)](https://youtu.be/8EBtGReGX-E)
 
 
