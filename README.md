@@ -33,9 +33,9 @@ Another topic is the use of the frenet-coordinate system which is used extensive
 ![img3] 
 
 ### Sensor Fusion & Prediction [line 113 to line 179](./src/main.cpp#L113)
-This part of the code takes the sensor fusion and ego car data and calculates signals, which are used in the following behaviour planner, by predicting **50 timesteps * 0.02 seconds = 1 second** into the future. These signals are
+This part of the code takes the sensor fusion and ego car data and calculates signals, which are used in the following behavior planner, by predicting **50 timesteps * 0.02 seconds = 1 second** into the future. These signals are
 
-* **danger** - boolean, if the ego car and the checked car are less than 2.5m in the d-dimension and 9m in the s-dimension apart. This bit stops all unnecassary calculations and slows down the vehicle with the maximum deceleration.
+* **danger** - boolean, if the ego car and the checked car are less than 2.5m in the d-dimension and 9m in the s-dimension apart. This bit stops all unnecessary calculations and slows down the vehicle with the maximum deceleration.
 * **car_ahead** - boolean, if the checked car is in the same lane and less than 30m in the s dimension away
 * **car_left** - boolean, if the checked car is left to current ego car lane and 10m behind or 30m in front of the ego vehicle
 * **car_right** - boolean, if the checked car is right to current ego car lane and 10m behind or 30m in front of the ego vehicle
@@ -44,8 +44,8 @@ This part of the code takes the sensor fusion and ego car data and calculates si
 * **delta_s** - double, minimum of all delta s of ego car and checked car on same lane
 * **ahead_speed** - double, speed of the checked vehicle which as the minimum delta s on same lane
 
-### Behaviour Planning [line 180 to line 229](./src/main.cpp#L180)
-The signals determined previously are now used to plan the behaviour of the vehicle and enable a generation of the trajectory in the next step. Here two important question have to be answered:
+### Behavior Planning [line 180 to line 229](./src/main.cpp#L180)
+The signals determined previously are now used to plan the behavior of the vehicle and enable a generation of the trajectory in the next step. Here two important question have to be answered:
   - Change lane or keep lane?
   - Positive or negative acceleration?
 
@@ -65,7 +65,7 @@ Two types of vectors are used here, one is the "food" for the spline (**ptsx, pt
 
 First, a certain number (**use_no_old_points**) of points of the last trajectory (or the current vehicle position, if there is no previous trajectory) is placed in the vector for the global points. This number is variable to allow fast course changes in critical situations (e.g. **danger**, **follow_car_ahead**).
 
-Then the last two points are also inserted into the spline-food-vectors. Afterwards a number of waypoints at a defined distance will be inserted in these vectors. Thes vectors of points are now converted into the local coordinate system of the vehicle (displacement and rotation) in order to simplify the following calculations. The necessary functions for this can be found in **utilities.cpp**. With these points the spline will be initialized.
+Then the last two points are also inserted into the spline-food-vectors. Afterwards a number of waypoints at a defined distance will be inserted in these vectors. These vectors of points are now converted into the local coordinate system of the vehicle (displacement and rotation) in order to simplify the following calculations. The necessary functions for this can be found in **utilities.cpp**. With these points the spline will be initialized.
 
 Now new local points are created with the help of the spline by evaluating the spline at selected x-points. The x-distance of these points is achieved by integrating the velocity and cumulating this result, i.e. the velocity of each trajectory is constant. The coordinates are then converted from local coordinates to global coordinates and passed to the simulation.
 
@@ -89,8 +89,8 @@ These are the suggested steps for **Windows** setup:
 * ``sudo apt-get install libssl-dev``
 * navigate to where you want to clone this repository to, for example:
  ``cd /mnt/c/Users/Bob``
-* ``git clone https://github.com/autonomobil/SCDND-P11_Path-Planning-Project``
-* navigate to project folder: ``cd SCDND-P11_Path-Planning-Project``
+* ``git clone https://github.com/autonomobil/SDCND-P11_Path-Planning-Project``
+* navigate to project folder: ``cd SDCND-P11_Path-Planning-Project``
 * ``sudo rm /usr/lib/libuWS.so``
 * ``./install-ubuntu.sh``
 * navigate to the build folder: ``cd build``
