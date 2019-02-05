@@ -111,14 +111,12 @@ int main()
                     int use_no_old_points = min(20, (int)prev_size);
 
                     //////////////////// PREDICTION ////////////////////
+                    bool danger = false;
                     bool car_ahead = false;
                     bool car_left = false;
                     bool car_right = false;
-                    int wanted_lane = lane;
                     double delta_s_left = 100000000000000;
                     double delta_s_right = 100000000000000;
-
-                    bool danger = false;
                     double delta_s = 10000000000000;
                     double ahead_speed;
 
@@ -164,13 +162,13 @@ int main()
 
                         } else if (check_car_lane - lane == -1) {
                             // car left
-                            car_left |= predict_car_s - 12 < predict_check_car_s && predict_car_s + 30 > predict_check_car_s;
+                            car_left |= predict_car_s - 10 < predict_check_car_s && predict_car_s + 30 > predict_check_car_s;
                             if (check_car_s - car_s < delta_s_left && (check_car_s - car_s) > 0) {
                                 delta_s_left = check_car_s - car_s;
                             }
                         } else if (check_car_lane - lane == 1) {
                             // car right
-                            car_right |= predict_car_s - 12 < predict_check_car_s && predict_car_s + 30 > predict_check_car_s;
+                            car_right |= predict_car_s - 10 < predict_check_car_s && predict_car_s + 30 > predict_check_car_s;
                             if (check_car_s - car_s < delta_s_right && (check_car_s - car_s) > 0) {
                                 delta_s_right = check_car_s - car_s;
                             }
@@ -178,34 +176,34 @@ int main()
                     }
 
                     //////////////////// BEHAVIOUR PLANNING ////////////////////
-                    double speed_diff = 0;
-                    // bool follow_car_ahead = false;
+                    double ref_acc = 0;
                     bool lane_change_left_best_opt = true; // check if left lane is best option
                     bool follow_car_ahead = false;
-                    bool lane_change = false;
+                    // bool lane_change = false;
+                    int planned_lane = lane;
 
                     if (delta_s_right > delta_s_left) {
                         lane_change_left_best_opt = false;
                     }
 
                     if (danger) {
-                        speed_diff -= MAX_ACC * dt;
+                        ref_vel -= MAX_ACC * dt;
                     } else if (car_ahead) {
                         if (!car_left && lane > 0 && lane_change_left_best_opt) {
                             // if there is no dangerous car left and there is a left lane
-                            wanted_lane--; // Change lane left.
-                            lane_change = true;
+                            planned_lane--; // Change lane left.
+                            // lane_change = true;
                             cout << "Lane change left! delta_s_left: " << delta_s_left << "   delta_s_right:" << delta_s_right << endl;
                         } else if (!car_right && lane != 2) {
                             // if there is no dangerous car right and there is a right lane
-                            wanted_lane++; // Change lane right.
-                            lane_change = true;
+                            planned_lane++; // Change lane right.
+                            // lane_change = true;
                             cout << "Lane change right! delta_s_left: " << delta_s_left << "   delta_s_right:" << delta_s_right << endl;
                         } else {
                             // slow down
                             cout << "car ahead! delta_s: " << delta_s << endl;
                             if (car_speed > ahead_speed * 0.95) {
-                                speed_diff -= MAX_ACC * dt * min(1.0, pow(12, 2) / pow((delta_s), 2));
+                                ref_vel -= MAX_ACC * dt * min(1.0, pow(12, 2) / pow((delta_s), 2));
                                 follow_car_ahead = true;
                             }
                         }
@@ -213,20 +211,21 @@ int main()
                     } else {
                         if (lane != 1) { // go back to center lane if possible, because there are more options
                             if ((lane == 0 && !car_right) || (lane == 2 && !car_left)) {
-                                wanted_lane = 1;
-                                lane_change = true;
+                                planned_lane = 1;
+                                // lane_change = true;
                                 cout << "Take me back to the center " << endl;
                             }
                         }
                         if (ref_vel < MAX_VEL) {
-                            speed_diff += MAX_ACC * dt * 0.7;
+                            ref_vel += MAX_ACC * dt * 0.7;
                         }
                     }
-                    ref_vel += speed_diff;
+                    // ref_vel += ref_acc;
 
                     if (ref_vel > MAX_VEL) {
                         ref_vel = MAX_VEL;
                     }
+
                     //////////////////// TRAJECTORY GENERATION ////////////////////
                     vector<double> next_x_vals;
                     vector<double> next_y_vals;
@@ -236,7 +235,7 @@ int main()
                     // take previous unused path points for continuity and smoothness
                     if (danger) {
                         use_no_old_points = 2;
-                    }else if (follow_car_ahead) {
+                    } else if (follow_car_ahead) {
                         use_no_old_points = 10;
                     }
 
@@ -291,17 +290,17 @@ int main()
                         if (i == 1) {
                             d_value = 2 + 4 * lane;
                         } else if (i == 2) {
-                            d_value = 2 + 4 * (wanted_lane+lane)/2;
+                            d_value = 2 + 4 * (planned_lane + lane) / 2;
                         } else if (i == 3) {
-                            d_value = 2 + 4 * wanted_lane;
+                            d_value = 2 + 4 * planned_lane;
                         }
 
-                        vector<double> next_wp = getXY(car_s + s_incr * i,  d_value, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+                        vector<double> next_wp = getXY(car_s + s_incr * i, d_value, map_waypoints_s, map_waypoints_x, map_waypoints_y);
                         ptsx.push_back(next_wp[0]);
                         ptsy.push_back(next_wp[1]);
                     }
 
-                    lane = wanted_lane;
+                    lane = planned_lane;
 
                     // global coordinates to local car coordinates
                     for (int i = 0; i < ptsx.size(); i++) {
