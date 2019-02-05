@@ -28,7 +28,7 @@ A closer look reveals that a linear interpolation between the sparse waypoints l
 ![img2]
 That's the reason why the included library spline.h is used [(link)](https://kluge.in-chemnitz.de/opensource/spline/) to smooth out the trajectories. Another option would be to use Jerk-Minimizing-Trajectories (JMT), but the use of spline interpolation gave sufficient results.
 
-Another topic is the use of the frenet-coordinate system which is used extensively in this project. [Reasons for doing this](https://github.com/ApolloAuto/apollo/issues/4299) and [how to do](https://en.wikipedia.org/wiki/Frenet%E2%80%93Serret_formulas). Luckliy helper code was provided to do the conversions from global to frenet coordinate system. This code is stored in [utilities.cpp](./src/utilities.cpp).
+Another topic is the use of the frenet-coordinate system which is used extensively in this project. [Reasons for doing this](https://github.com/ApolloAuto/apollo/issues/4299) and [how to do](https://en.wikipedia.org/wiki/Frenet%E2%80%93Serret_formulas). Luckily helper code was provided to do the conversions from global to frenet coordinate system. This code is stored in [utilities.cpp](./src/utilities.cpp).
 
 ![img3] 
 
